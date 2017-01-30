@@ -26,42 +26,50 @@
     mode: 0777
   become: true
 
+<<<<<<< 0b8c2a0815ea1092e883215ae35a1d1fd4538b7f
 - name: define options when deploying invoker on Ubuntu
   set_fact:
     linuxOptions: "-v /sys/fs/cgroup:/sys/fs/cgroup -v /run/runc:/run/runc -v {{ runcLocation | default('/usr/bin/docker-runc') }}:/usr/bin/docker-runc -v /usr/lib/x86_64-linux-gnu/libapparmor.so.1:/usr/lib/x86_64-linux-gnu/libapparmor.so.1"
   when: whisk_version_name != "mac"
 
-- name: start invoker using docker cli
-  shell: >
-        docker run -d
-        --userns=host
-        --pid=host
-        --privileged
-        {{ linuxOptions | default('') }}
-        --name invoker{{play_hosts.index(inventory_hostname)}}
-        --hostname invoker{{play_hosts.index(inventory_hostname)}}
-        --restart {{ docker.restart.policy }}
-        -e COMPONENT_NAME=invoker{{play_hosts.index(inventory_hostname)}}
-        -e CONSULSERVER_HOST={{ groups['consul_servers'] | first }}
-        -e CONSUL_HOST_PORT4={{ consul.port.http }}
-        -e PORT=8080
-        -e SELF_DOCKER_ENDPOINT=localhost
-        -e SERVICE_CHECK_HTTP=/ping
-        -e SERVICE_CHECK_TIMEOUT=2s
-        -e SERVICE_CHECK_INTERVAL=15s
-        -v {{whisk_logs_dir}}/invoker{{play_hosts.index(inventory_hostname)}}:/logs
-        -v {{dockerInfo["json"]["DockerRootDir"]}}/containers/:/containers
-        -v {{ docker_sock | default('/var/run/docker.sock') }}:/var/run/docker.sock
-        -p {{invoker.port + play_hosts.index(inventory_hostname)}}:8080
-        {{docker_registry}}{{ docker_image_prefix }}/invoker:{{docker_image_tag}}
-        /bin/sh -c "/invoker/bin/invoker {{play_hosts.index(inventory_hostname)}} >> /logs/invoker{{play_hosts.index(inventory_hostname)}}_logs.log 2>&1"
-
+#- name: start invoker using docker cli
+#  shell: >
+#        docker run -d
+#        --userns=host
+#        --pid=host
+#        --privileged
+#        {{ linuxOptions | default('') }}
+#        --name invoker{{play_hosts.index(inventory_hostname)}}
+#        --hostname invoker{{play_hosts.index(inventory_hostname)}}
+#        --restart {{ docker.restart.policy }}
+#        -e COMPONENT_NAME=invoker{{play_hosts.index(inventory_hostname)}}
+#        -e CONSULSERVER_HOST={{ groups['consul_servers'] | first }}
+#        -e CONSUL_HOST_PORT4={{ consul.port.http }}
+#        -e PORT=8080
+#        -e SELF_DOCKER_ENDPOINT=localhost
+#        -e SERVICE_CHECK_HTTP=/ping
+#        -e SERVICE_CHECK_TIMEOUT=2s
+#        -e SERVICE_CHECK_INTERVAL=15s
+#        -v {{whisk_logs_dir}}/invoker{{play_hosts.index(inventory_hostname)}}:/logs
+#        -v {{dockerInfo["json"]["DockerRootDir"]}}/containers/:/containers
+#        -v {{ docker_sock | default('/var/run/docker.sock') }}:/var/run/docker.sock
+#        -p {{invoker.port + play_hosts.index(inventory_hostname)}}:8080
+#        {{docker_registry}}{{ docker_image_prefix }}/invoker:{{docker_image_tag}}
+#        /bin/sh -c "/invoker/bin/invoker {{play_hosts.index(inventory_hostname)}} >> /logs/invoker{{play_hosts.index(inventory_hostname)}}_logs.log 2>&1"
 
 # todo: re-enable docker_container module once https://github.com/ansible/ansible-modules-core/issues/5054 is resolved
 
+- name: get name of invoker container
+  shell: docker ps | grep \/invoker | awk '{print $1}'
+  register: container_name
+
+- name: restart invoker
+  shell: "docker restart {{container_name.stdout}}"
+
 - name: wait until Invoker is up and running
   uri:
-    url: "http://{{ inventory_hostname }}:{{invoker.port + play_hosts.index(inventory_hostname)}}/ping"
+    url: "http://{{ kubeips.invokers.pod_ip }}:12001/ping"
+    #url: "http://{{ invoker_ip }}:{{invoker.port + play_hosts.index(inventory_hostname)}}/ping"
   register: result
   until: result.status == 200
   retries: 12

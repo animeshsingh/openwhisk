@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db
+  labels:
+    name: whisk
+    type: db
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+  # nodeName: kube-1-4-2
+  containers:
+  - name: couchdb
+    image: couchdb
+    ports:
+    - containerPort: 5984
+      # hostPort: 5984
+    # TODO, the postStart command here needs to occur after a healthy HTTPcheck comes back from couch
+    # lifecycle:
+    #   postStart:
+    #     exec:
+    #       command:
+    #         - "curl -X PUT -u "couch_user:couch_password" http://localhost:5984/_config/admins/couch_user -d \'{"couch_password"}\'"
+    #         - 'curl -X PUT -u "couch_user:couch_password" http://localhost:5984/_config/query_server_config/reduce_limit -d \'{"false"}\'"'

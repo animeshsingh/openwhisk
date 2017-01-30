@@ -1,0 +1,59 @@
+# TODO, maybe ansible will work with this if we can add ssh key after pods come up
+apiVersion: v1
+kind: Pod
+metadata:
+  name: controllers
+  labels:
+    name: whisk
+    type: controllers
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+    # kubernetes.io/hostname: kube-1-4-2
+  volumes:
+  - name: controllerlogs
+    hostPath:
+      path: /tmp/wsklogs/controller
+  containers:
+  - name: controller
+    image: 10.3.2.51:5000/whisk/controller
+    env:
+    - name: "COMPONENT_NAME"
+      value: "controller"
+    # This will only work when controller/consul on the same host TODO
+    - name: "CONSULSERVER_HOST"
+      #value: "{{kubeips.consulservers.pod_ip}}"
+      value: "{{kube_podips.results[3].stdout}}"
+
+      #value: 100.71.175.131
+      #valueFrom:
+      #  fieldRef:
+      #    fieldPath: status.podIP
+    - name: "CONSUL_HOST_PORT4"
+      value: "8500"
+    - name: "KAFKA_NUMPARTITIONS"
+      value: "2"
+    - name: "SERVICE_CHECK_HTTP"
+      value: "/ping"
+    - name: "SERVICE_CHECK_TIMEOUT"
+      value: "2s"
+    - name: "SERVICE_CHECK_INTERVAL"
+      value: "15s"
+    - name: "PORT"
+      value: "8080"
+    ports:
+    - containerPort: 8080
+      # hostPort: 10001
+    volumeMounts:
+    - name: controllerlogs
+      mountPath: "/logs"
+
+## render consul config.json.j2 to /tmp/consul/config.json
+# POD_IP=$(kubectl describe pod consul | grep '^IP:' | awk '{ print $2 }')
+# wait until the Consul Server/Agent in this host is up and running (rerun until return 200)
+# curl -X PUT "http://${POD_IP}:8500/v1/kv/consulIsAlive"
+# # delete is alive token from Consul Server/Agent (rerun until return 200)
+# curl -v -X DELETE "http://${POD_IP}:8500/v1/kv/consulIsAlive"
+# # notify handler to fill in Consul KV store with parameters in whisk.properties ?
+# # local_action: command python "{{ openwhisk_home }}/tools/health/kvstore" --import -d "{{ playbook_dir }}/../"

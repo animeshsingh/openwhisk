@@ -1,21 +1,18 @@
 ---
 # This role will install Kafka with Zookeeper in group 'kafka' in the environment inventory
 
-- name: "pull the zookeeper:{{ zookeeper.version }} image"
-  shell: "docker pull zookeeper:{{ zookeeper.version }}"
-
-- name: (re)start zookeeper
-  docker_container:
-    name: zookeeper
-    image: zookeeper:{{ zookeeper.version }}
-    state: started
-    recreate: true
-    restart_policy: "{{ docker.restart.policy }}"
-    ports:
-      - "{{ zookeeper.port }}:2181"
+#- name: (re)start zookeeper
+#  docker_container:
+#    name: zookeeper
+#    image: zookeeper:3.4
+#    state: started
+#    recreate: true
+#    restart_policy: "{{ docker.restart.policy }}"
+#    ports:
+#      - "{{ zookeeper.port }}:2181"
 
 - name: wait until the Zookeeper in this host is up and running
-  action: shell echo ruok | nc -w 3 -i 1 {{ inventory_hostname }} {{ zookeeper.port }}
+  action: shell echo ruok | nc -w 3 {{ kafka_ip }} {{ zookeeper.port }}
   register: result
   until: (result.rc == 0) and (result.stdout == 'imok')
   retries: 36
@@ -24,22 +21,28 @@
 - name: "pull the ches/kafka:{{ kafka.version }} image"
   shell: "docker pull ches/kafka:{{ kafka.version }}"
 
-- name: (re)start kafka
-  docker_container:
-    name: kafka
-    image: ches/kafka:{{ kafka.version }}
-    state: started
-    recreate: true
-    restart_policy: "{{ docker.restart.policy }}"
-    links:
-      - "zookeeper:zookeeper"
-    env:
-      "KAFKA_ADVERTISED_HOST_NAME": "{{ inventory_hostname }}"
-    ports:
-      - "{{ kafka.port }}:9092"
+#- name: (re)start kafka
+#  docker_container:
+#    name: kafka
+#    image: ches/kafka:0.10.0.1
+#    state: started
+#    recreate: true
+#    restart_policy: "{{ docker.restart.policy }}"
+#    links:
+#      - "zookeeper:zookeeper"
+#    env:
+#      "KAFKA_ADVERTISED_HOST_NAME": "{{ kafka_ip }}"
+#    ports:
+#      - "{{ kafka.port }}:9092"
+
+- name: get name of kafka container
+  shell: docker ps | grep ches\/kafka | awk '{print $1}'
+  register: container_name
+
+- debug: msg="{{container_name.stdout}}"
 
 - name: wait until the kafka server started up
-  shell: docker logs kafka
+  shell: docker logs {{container_name.stdout}}
   register: result
   until: ('[Kafka Server 0], started' in result.stdout)
   retries: 10
@@ -52,5 +55,5 @@
     - health
 
 - name: create the invoker topics
-  shell: "docker exec kafka bash -c 'unset JMX_PORT; kafka-topics.sh --create --topic invoke{{ item.0 }} --replication-factor 1 --partitions 1 --zookeeper {{ inventory_hostname }}:{{ zookeeper.port }}'"
+  shell: "docker exec {{container_name.stdout}} bash -c 'unset JMX_PORT; kafka-topics.sh --create --topic invoke{{ item.0 }} --replication-factor 1 --partitions 1 --zookeeper {{ kafka_ip }}:{{ zookeeper.port }}'"
   with_indexed_items: "{{ groups['invokers'] }}"

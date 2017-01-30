@@ -1,0 +1,110 @@
+---
+db_provider: CouchDB
+db_port: 5984
+db_protocol: http
+db_username: couch_user
+db_password: couch_password
+db_host: 100.75.58.125 #"{{ kubeips.db.pod_ip }}"
+db_auth: "subjects"
+db_prefix: "{{ ansible_user_id }}_{{ ansible_hostname|lower }}_"
+
+# apigw db credentials minimum read/write
+db_apigw_username: "{{ db_username }}"
+db_apigw_password: "{{ db_password }}"
+db_apigw: "{{ db_prefix }}gwapis"
+apigw_initdb: true
+
+whisk_version_name: local
+nginx_conf_dir: /tmp/nginx
+consul_conf_dir: /tmp/consul
+whisk_logs_dir: /tmp/wsklogs
+cli_nginx_dir: "{{ nginx_conf_dir }}/cli/go/download"
+registry_conf_dir: /tmp/registry
+registry_storage_dir: "/"
+#docker_registry: "whisk-registry:5000/"
+docker_registry: "{{ groups['registry'] | first }}:5000/"
+docker_dns: ""
+
+registry:
+  version: 2.3.1
+  port: 5000
+  gencert: false
+  recycle:
+    threshold: 80
+    keeptags: 5
+
+# openstack vars
+# TODO, should move these to a role and create a designated "defaults.yml" file
+rc_file:
+#net_name: "{{ lookup('env','OS_NET_NAME') }}"
+net_id: "{{ lookup('env','OS_NET_ID') }}"
+image: "{{ lookup('env','OS_IMAGE') }}"
+default_flavor: "{{ lookup('env','OS_FLAVOR') | default('m1.small') }}"
+auth:
+  auth_url: "{{ lookup('env','OS_AUTH_URL') }}"
+  username: "{{ lookup('env','OS_USERNAME') }}"
+  password: "{{ lookup('env','OS_PASSWORD') }}"
+  project_name: "{{ lookup('env','OS_PROJECT_NAME') }}"
+key_name: "{{ lookup('env','OS_KEY_NAME') }}"
+security_groups: "{{ lookup('env','OS_SECURITY_GROUPS') }}"
+
+# list of instances.
+# TODO, move each object to designated group_vars file
+instances:
+  - name: registry
+    num_instances: 1
+    flavor:
+
+  - name: edge
+    num_instances: 1
+    flavor:
+
+  - name: controllers
+    num_instances: 1
+    flavor:
+
+  - name: kafka
+    num_instances: 1
+    flavor:
+
+  - name: consul_servers
+    num_instances: 1
+    flavor:
+
+  - name: invokers
+    num_instances: 2
+    flavor:
+
+  - name: db
+    num_instances: 1
+    flavor:
+    volume:
+      name:
+      size:
+      fstype:
+      fsmount:
+
+# API GW connection configuration
+apigw_auth_user: ""
+apigw_auth_pwd: ""
+apigw_host: "http://100.70.218.225:{{apigateway.port.api}}/v1" # "http://{{ kubeips.edge.pod_ip }}:{{apigateway.port.api}}/v1"
+
+#kubeips:
+#  controller:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.70.104.235
+#  kafka:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.76.233.92
+#  consul:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.71.175.131
+#  db:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.75.58.125
+#  edge:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.70.218.225
+#  invoker:
+#    host_ip: 10.3.2.44
+#    pod_ip: 100.76.236.86

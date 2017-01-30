@@ -1,0 +1,6 @@
+kubeips:
+{% for job in components %}
+  {{job.name}}:
+    host_ip: {{job.hostip}}
+    pod_ip: {{job.podip}}
+{% endfor %}

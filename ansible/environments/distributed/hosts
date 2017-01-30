@@ -18,4 +18,4 @@ ansible ansible_connection=local
 10.3.2.158
 10.3.2.159
 [db]
-10.3.2.16
+10.3.2.44

@@ -27,17 +27,16 @@ limits.actions.invokes.concurrent={{ limits.actions.invokes.concurrent }}
 limits.actions.invokes.concurrentInSystem={{ limits.actions.invokes.concurrentInSystem }}
 limits.triggers.fires.perMinute={{ limits.triggers.fires.perMinute }}
 {% endif %}
-
-consulserver.host={{ groups["consul_servers"]|first }}
-controller.host={{ groups["controllers"]|first }}
-edge.host={{ groups["edge"]|first }}
+consulserver.host={{ kubeips.consulservers.pod_ip }}
+controller.host={{ kubeips.controllers.pod_ip }}
+edge.host={{ kubeips.edge.pod_ip }}
 {% if groups['entitlement_servers'] is defined %}
 entitlement.host={{ groups["entitlement_servers"] | first }}
 {% endif %}
-kafka.host={{ groups["kafka"]|first }}
-loadbalancer.host={{ groups["controllers"]|first }}
-router.host={{ groups["edge"]|first }}
-zookeeper.host={{ groups["kafka"]|first }}
+kafka.host={{ kubeips.kafka.pod_ip }}
+loadbalancer.host={{ kubeips.controllers.pod_ip }}
+router.host={{ kubeips.edge.pod_ip }}
+zookeeper.host={{ kubeips.kafka.pod_ip }}
 invoker.hosts={{ groups["invokers"] | join(",") }}
 
 edge.host.uiport=443

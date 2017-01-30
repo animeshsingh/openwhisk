@@ -4,7 +4,7 @@
 - set_fact:
     catalog_location={{ item.value.location }}
     catalog_repo_url={{ item.value.url }}
-    api_host={{ groups['edge'] | first }}
+    api_host={{ kubeips.edge.pod_ip }}
     version="HEAD"
     repo_update="yes"
 

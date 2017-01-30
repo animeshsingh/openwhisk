@@ -1,0 +1,113 @@
+---
+# provision_env.yml
+
+- name: create kube instances and hosts file
+  hosts: localhost
+  tasks:
+    - name: add header to hosts file
+      copy:
+        content: "; the first parameter in a host is the inventory_hostname which has to be\n; either an ip\n; or a resolvable hostname\n\n; used for local actions only\nansible ansible_connection=local\n"
+        dest: "{{inventory_dir}}/hosts"
+
+    - name: define jobs
+      set_fact:
+        component_names:
+        - edge
+        - controllers
+        - kafka
+        - consulservers
+        - db
+        # - registry
+        - invokers
+
+    - name: provision services
+      shell: "kubectl create -f files/kube/whisk-{{item}}-service.yml"
+      with_items: component_names
+      ignore_errors: yes
+
+    - name: get service ips
+      #shell: kubectl get pod {{item}} -o=json | jq -r '.status.podIP'
+      shell: "kubectl get service whisk-{{item}}-service -o=json | jq -r '.spec.clusterIP'"
+      register: kube_podips
+      with_items: "{{component_names}}"
+
+    #- set_fact:
+    #    kube_service_ips: kube_service_ips|default({})
+    #  with_items: "{{component_names}}"
+
+    - template: src=kube/{{item}} dest=files/kube/{{item}} #dest={{inventory_dir}}/files/{{item}}
+      with_items:
+      - consulservers.yml
+      - controllers.yml
+      - db.yml
+      - edge.yml
+      - invokers.yml
+      - kafka.yml
+
+    - name: provision pods
+      shell: "kubectl create -f files/kube/{{item}}.yml"
+      with_items: component_names
+      ignore_errors: yes
+
+    - name: get host ips
+      shell: kubectl get pod {{item}} -o=json | jq -r '.status.hostIP'
+      register: kube_hostips
+      with_items: "{{component_names}}"
+
+    - debug: msg="{{kube_hostips}}"
+    #- name: set kubeips
+    #  debug: msg="{{{item.0}}: {'podip': {{item.1}}, 'hostip': {{item.2}}}}"
+    #  #set_fact: 
+    #  #  kubeips: "kubeips(default({}) | combine({item.0: {'podip': {{item.1}}, 'hostip': {{item.2}}, recursive=True) }"
+    #  with_together:
+    #    - component_names
+    #    - kube_podips
+    #    - kube_hostips
+
+    - name: create component array
+      set_fact:
+        components: "{{ components|default([]) + [ {'name': component_names[item|int], 'podip': kube_podips.results[item|int].stdout, 'hostip': kube_hostips.results[item|int].stdout  } ] }}"
+      with_sequence: start=0 end={{component_names|length - 1}}
+
+    - debug: msg="{{components}}"
+    - template: src=all dest={{inventory_dir}}/group_vars/all
+
+    - shell: "echo [{{item.name}}] >> {{inventory_dir}}/hosts ; echo {{item.hostip}} {{item.name}}_ip={{item.podip}} >> {{inventory_dir}}/hosts"
+      with_items: components
+
+
+    - shell: "echo [registry] >> {{inventory_dir}}/hosts ; echo 10.3.2.51 pod_ip=10.3.2.51 >> {{inventory_dir}}/hosts"
+    - shell: "sed -i 's/consulservers/consul_servers/g' {{inventory_dir}}/hosts" # TODO, hacky, fix this and next line
+    - set_fact:
+        components: "{{ components + [{'podip': '10.3.2.51', 'name': 'registry', 'hostip': '10.3.2.51' }] }}"
+
+    #- {'podip': u'100.69.136.142', 'name': u'invokers', 'hostip': u'10.3.2.44'}
+
+    - meta: refresh_inventory
+
+    - debug: msg="{{ item.name }}"
+      with_items: components
+
+    #- set_fact:
+    #    kubeips: {"edge":{}, "invokers":{}, "db":{}, "consulservers":{}, "kafka":{}, "controllers":{}}
+ 
+    #- name: create component objects
+      #set_fact:
+        #kubeobj: " {{ kubeobj|default({'kubeips': []}) | combine( 'kubeips' : { item.name : { 'host_ip' : item.host_ip,  'pod_ip' : item.pod_ip } }, recursive=True )  }} "
+        #kubeobj: "{{ kubeobj|default({'kubeips' : []})   }}"
+        #kubeobj:
+        #kubeobj: "{{ {kubeobj|default({}) | combine ({ 'hostip' : item.hostip,  'podip' : item.podip })}}}"
+      #with_items: components
+     
+    #- lineinfile: insertafter="[all:vars]" line="kubeips={{components}}" dest="{{inventory_dir}}/hosts"
+
+    # - lineinfile: insertafter="^[{{item.name}}" line="{{item.hostip}} pod={{item.podip}}" dest="{{inventory_dir}}/hosts"
+    #   with_items: components
+
+## TODO, should render the hosts file from a template by using the add_host module commented below with a template
+#- shell: "echo [{{name}}] \n kube_podips >> {{inventory_dir}}/hosts"
+#  when: "{{hosts_file.rc}} != 0"
+#  with_items:
+#  - controller
+#  - edge
+

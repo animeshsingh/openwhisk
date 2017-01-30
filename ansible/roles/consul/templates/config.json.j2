@@ -4,9 +4,9 @@
     "data_dir": "/consul/data",
     "ui": true,
     "log_level": "WARN",
-    "node_name": "{{ ansible_host | default(inventory_hostname) }}",
+    "node_name": "{{ kubeips.consulservers.pod_ip }}",
     "client_addr": "0.0.0.0",
-    "advertise_addr": "{{ ansible_host | default(inventory_hostname) }}",
+    "advertise_addr": "{{ kubeips.consulservers.pod_ip }}",
     "ports": {
         "dns": 8600
     },

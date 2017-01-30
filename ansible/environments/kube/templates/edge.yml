@@ -1,0 +1,37 @@
+# TODO, maybe ansible will work with this if we can add ssh key after pods come up
+apiVersion: v1
+kind: Pod
+metadata:
+  name: edge
+  labels:
+    name: whisk
+    type: edge
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+    # kubernetes.io/hostname: kube-1-4-2
+  volumes:
+  - name: nginxlogs
+    hostPath:
+      path: /tmp/wsklogs/nginx
+  - name: nginxconf
+    # TODO, can render nginx.conf.j2 here. should this go on each host before pod comes up?
+    # This just needs the controller pod hostname, which is resolvable within pods
+    hostPath:
+      path: /tmp/nginx/
+  containers:
+  - name: edge
+    image: nginx
+    ports:
+    - containerPort: 80
+      # hostPort: 80
+    - containerPort: 443
+      # hostPort: 443
+    - containerPort: 8443
+      # hostPort: 8443
+    volumeMounts:
+    - name: nginxlogs
+      mountPath: "/logs"
+    - name: nginxconf
+      mountPath: "/etc/nginx"

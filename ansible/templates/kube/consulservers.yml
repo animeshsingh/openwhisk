@@ -1,0 +1,82 @@
+# TODO, maybe ansible will work with this if we can add ssh key after pods come up
+apiVersion: v1
+kind: Pod
+metadata:
+  name: consulservers
+  labels:
+    name: whisk
+    type: consulservers
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+    # kubernetes.io/hostname: kube-1-4-2
+  volumes:
+  - name: consullogs
+    hostPath:
+      path: /tmp/wsklogs/consul
+  - name: consulconf
+    # TODO, can render nginx.conf.j2 here. should this go on each host before pod comes up?
+    # This just needs the controller pod hostname, which is resolvable within pods
+    hostPath:
+      path: /tmp/consul/
+  - name: registratorlogs
+    hostPath:
+      path: /tmp/wsklogs/registrator
+  - name: dockersock
+    hostPath:
+      # directory location on host
+      path: /var/run/docker.sock
+  containers:
+  - name: consul
+    image: consul:v0.7.0
+    ports:
+    - containerPort: 8300
+      hostPort: 8300
+    - containerPort: 8301
+      hostPort: 8301
+      protocol: UDP
+    - containerPort: 8302
+      hostPort: 8302
+      protocol: UDP
+    - containerPort: 8400
+      hostPort: 8400
+    - containerPort: 8301
+      hostPort: 8301
+    - containerPort: 8302
+      hostPort: 8302
+    - containerPort: 8500
+      hostPort: 8500
+    - containerPort: 8600
+      hostPort: 8600
+      protocol: UDP
+    - containerPort: 8600
+    volumeMounts:
+    - name: consullogs
+      mountPath: "/logs"
+    - name: consulconf
+      mountPath: "/consul/config"
+
+  - name: registrator
+    image: gliderlabs/registrator
+    env:
+    - name: MY_POD_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.podIP
+    volumeMounts:
+    - name: dockersock
+      mountPath: "/tmp/docker.sock"
+    - name: registratorlogs
+      mountPath: "/logs"
+    args: [ "-ip", "$(MY_POD_IP)", "-resync", "2", "consul://$(MY_POD_IP):8500" ]
+
+
+## render consul config.json.j2 to /tmp/consul/config.json
+# POD_IP=$(kubectl describe pod consul | grep '^IP:' | awk '{ print $2 }')
+# wait until the Consul Server/Agent in this host is up and running (rerun until return 200)
+# curl -X PUT "http://${POD_IP}:8500/v1/kv/consulIsAlive"
+# # delete is alive token from Consul Server/Agent (rerun until return 200)
+# curl -v -X DELETE "http://${POD_IP}:8500/v1/kv/consulIsAlive"
+# # notify handler to fill in Consul KV store with parameters in whisk.properties ?
+# # local_action: command python "{{ openwhisk_home }}/tools/health/kvstore" --import -d "{{ playbook_dir }}/../"

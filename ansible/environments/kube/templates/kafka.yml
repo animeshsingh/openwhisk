@@ -1,0 +1,39 @@
+# TODO, maybe ansible will work with this if we can add ssh key after pods come up
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kafka
+  labels:
+    name: whisk
+    type: kafka
+# data:
+#   hosts: |
+#     127.0.0.1 kube-1-4-2
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+
+  containers:
+  - name: zookeeper
+    image: zookeeper:3.4
+    ports:
+    - containerPort: 2181
+      # hostPort: 2181
+
+  - name: kafka
+    image: ches/kafka:0.10.0.1
+    env:
+    - name: "KAFKA_ADVERTISED_HOST_NAME"
+      #valueFrom:
+      #  fieldRef:
+      #    fieldPath: status.podIP
+      #value: "{{kubeips.kafka.pod_ip}}"
+      value: kube_podips.results[2].stdout
+
+    # TODO, links?
+    # links:
+    #   - zookeeper: zookeeper
+    ports:
+    - containerPort: 9092
+      # hostPort: 9092

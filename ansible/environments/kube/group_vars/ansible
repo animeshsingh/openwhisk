@@ -1,0 +1,19 @@
+kubeips:
+  edge:
+    host_ip: 10.3.2.44
+    pod_ip: 100.66.61.249
+  controllers:
+    host_ip: 10.3.2.44
+    pod_ip: 100.68.130.102
+  kafka:
+    host_ip: 10.3.2.44
+    pod_ip: 100.69.163.175
+  consulservers:
+    host_ip: 10.3.2.44
+    pod_ip: 100.73.220.82
+  db:
+    host_ip: 10.3.2.44
+    pod_ip: 100.65.128.224
+  invokers:
+    host_ip: 10.3.2.44
+    pod_ip: 100.69.136.142

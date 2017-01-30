@@ -26,20 +26,20 @@
 - name: "pull the nginx:{{ nginx.version }} image"
   shell: "docker pull nginx:{{ nginx.version }}"
 
-- name: (re)start nginx
-  docker_container:
-    name: nginx
-    image: nginx:{{ nginx.version }}
-    state: started
-    recreate: true
-    restart_policy: "{{ docker.restart.policy }}"
-    hostname: "nginx"
-    volumes:
-      - "{{ whisk_logs_dir }}/nginx:/logs"
-      - "{{ nginx_conf_dir }}:/etc/nginx"
-    expose:
-      - 8443
-    ports:
-      - "{{ nginx.port.http }}:80"
-      - "{{ nginx.port.api }}:443"
-      - "{{ nginx.port.adminportal }}:8443"
+#- name: (re)start nginx
+#  docker_container:
+#    name: nginx
+#    image: nginx
+#    state: started
+#    recreate: true
+#    restart_policy: "{{ docker.restart.policy }}"
+#    hostname: "nginx"
+#    volumes:
+#      - "{{ whisk_logs_dir }}/nginx:/logs"
+#      - "{{ nginx_conf_dir }}:/etc/nginx"
+#    expose:
+#      - 8443
+#    ports:
+#      - "{{ nginx.port.http }}:80"
+#      - "{{ nginx.port.api }}:443"
+#      - "{{ nginx.port.adminportal }}:8443"

@@ -14,6 +14,7 @@
 
 
 - hosts: all:!ansible
+#- hosts: invokers:registry:!ansible
   roles:
   - whiskhost
   - docker

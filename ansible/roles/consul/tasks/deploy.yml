@@ -27,32 +27,45 @@
 - name: "pull the consul:{{ consul.version }} image"
   shell: "docker pull consul:{{ consul.version }}"
 
-- name: (re)start consul server/agent
-  docker_container:
-    name: consul
-    image: consul:{{ consul.version }}
-    state: started
-    recreate: true
-    restart_policy: "{{ docker.restart.policy }}"
-    command: "consul agent -config-dir /consul/config"
-    volumes:
-      - "{{ whisk_logs_dir }}/consul:/logs"
-      - "{{ consul_conf_dir }}:/consul/config"
-    ports:
-      - "{{ consul.port.dns }}:8600/udp"
-      - "{{ consul.port.http }}:8500"
-      - "{{ consul.port.rpc }}:8400"
-      - "{{ consul.port.serf_wan }}:8302"
-      - "{{ consul.port.serf_lan }}:8301"
-      - "{{ consul.port.serf_wan }}:8302/udp"
-      - "{{ consul.port.serf_lan }}:8301/udp"
-      - "{{ consul.port.server }}:8300"
+- name: get name of consul container
+  shell: docker ps | grep 'consul:' | awk '{print $1}'
+  register: consul_container
   when: "'consul_servers' in group_names"
+
+- name: get name of registrator container
+  shell: docker ps | grep 'gliderlabs\/registrator' | awk '{print $1}'
+  register: registrator_container
+  when: "'consul_servers' in group_names"
+
+- name: restart consul container
+  shell: docker restart {{consul_container.stdout}}
+  when: "'consul_servers' in group_names"
+
+#- name: (re)start consul server/agent
+#  docker_container:
+#    name: consul
+#    image: consul:v0.7.0
+#    state: started
+#    recreate: true
+#    restart_policy: "{{ docker.restart.policy }}"
+#    volumes:
+#      - "{{ whisk_logs_dir }}/consul:/logs"
+#      - "{{ consul_conf_dir }}:/consul/config"
+#    ports:
+#      - "{{ consul.port.dns }}:8600/udp"
+#      - "{{ consul.port.http }}:8500"
+#      - "{{ consul.port.rpc }}:8400"
+#      - "{{ consul.port.serf_wan }}:8302"
+#      - "{{ consul.port.serf_lan }}:8301"
+#      - "{{ consul.port.serf_wan }}:8302/udp"
+#      - "{{ consul.port.serf_lan }}:8301/udp"
+#      - "{{ consul.port.server }}:8300"
+#  when: "'consul_servers' in group_names"
 
 - name: wait until the Consul Server/Agent in this host is up and running
   uri:
     method: PUT
-    url: "http://{{ inventory_hostname }}:{{ consul.port.http }}/v1/kv/consulIsAlive"
+    url: "http://{{ kubeips.consulservers.pod_ip }}:{{ consul.port.http }}/v1/kv/consulIsAlive"
     body: 'true'
   register: result
   until: result.status == 200
@@ -63,7 +76,7 @@
 - name: delete is alive token from Consul Server/Agent
   uri:
     method: DELETE
-    url: "http://{{ inventory_hostname }}:{{ consul.port.http }}/v1/kv/consulIsAlive"
+    url: "http://{{ kubeips.consulservers.pod_ip }}:{{ consul.port.http }}/v1/kv/consulIsAlive"
   register: result
   until: result.status == 200
   retries: 10
@@ -75,16 +88,22 @@
   notify: fill consul kv
   when: "'consul_servers' in group_names"
 
-- name: start registrator using docker cli
-  shell: >
-        docker run -d
-        --name registrator
-        --hostname registrator
-        --restart {{ docker.restart.policy }}
-        --log-driver syslog
-        -v {{ whisk_logs_dir }}/registrator:/logs
-        -v {{ docker_sock | default('/var/run/docker.sock') }}:/tmp/docker.sock
-        --userns host
-        gliderlabs/registrator -ip {{ ansible_host | default(inventory_hostname) }} -resync 2 consul://{{ groups['consul_servers'] | first }}:{{ consul.port.http }}
-
 # todo: re-enable docker_container module once https://github.com/ansible/ansible-modules-core/issues/5054 is resolved
+
+- name: restart registrator container
+  shell: docker restart {{registrator_container.stdout}}
+  when: "'consul_servers' in group_names"
+
+#- name: (re)start registrator
+#  docker_container:
+#    name: registrator
+#    hostname: registrator
+#    image: gliderlabs/registrator
+#    state: started
+#    recreate: true
+#    restart_policy: "{{ docker.restart.policy }}"
+#    log_driver: syslog
+#    volumes:
+#      - "{{ whisk_logs_dir }}/registrator:/logs"
+#      - "{{ docker_sock | default('/var/run/docker.sock') }}:/tmp/docker.sock"
+#    command: "-ip {{ ansible_host | default(inventory_hostname) }} -resync 2 consul://{{ groups['consul_servers'] | first }}:{{ consul.port.http }}"

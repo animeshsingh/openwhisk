@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "whisk-db-service"
+spec:
+  selector: 
+    name: whisk
+    type: db
+  ports:
+    - port: 5984
+      targetPort: 5984
+      name: couchdb

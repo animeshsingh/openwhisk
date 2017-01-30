@@ -1,0 +1,61 @@
+# TODO, maybe ansible will work with this if we can add ssh key after pods come up
+apiVersion: v1
+kind: Pod
+metadata:
+  name: invokers
+  labels:
+    name: whisk
+    type: invoker
+spec:
+  #hostNetwork: true
+  nodeSelector:
+    type: whisk
+    # kubernetes.io/hostname: kube-1-4-2
+  volumes:
+  - name: invokerlogs
+    hostPath:
+      path: /tmp/wsklogs/invoker0
+  - name: dockerrootdir
+    hostPath:
+      path: "/var/lib/docker/containers"
+  #- name: dockersock
+  #  hostPath:
+  #    # directory location on host
+  #    path: /var/run/docker.sock
+  containers:
+  - name: invoker0
+    image: 10.3.2.51:5000/whisk/invoker
+    #command: ["/bin/sh"]
+    command: ["/bin/sh", "-c", '/invoker/bin/invoker 0' ]
+    #args: ["/bin/sh", "-c", "/invoker/bin/invoker invoker 0 >> /logs/invoker0_logs.log 2>&1"]
+    #args: ["-c", "/invoker/bin/invoker invoker0"]
+    env:
+    - name: "COMPONENT_NAME"
+      value: "invoker0"
+    - name: "CONSULSERVER_HOST"
+      #value: "100.76.64.78"
+      value: "100.76.64.78"
+
+      #value: "whisk-consulservers-service"
+      #value: 100.71.175.131
+    - name: "CONSUL_HOST_PORT4"
+      value: "8500"
+    - name: "PORT"
+      value: "8080"
+    - name: "SELF_DOCKER_ENDPOINT"
+      value: "10.3.2.44:4243"
+      # TODO, get host ip
+    - name: "SERVICE_CHECK_HTTP"
+      value: "/ping"
+    - name: "SERVICE_CHECK_TIMEOUT"
+      value: "2s"
+    - name: "SERVICE_CHECK_INTERVAL"
+      value: "15s"
+    ports:
+    - containerPort: 12001
+    volumeMounts:
+    - name: invokerlogs
+      mountPath: "/logs"
+    - name: dockerrootdir
+      mountPath: "/containers"
+

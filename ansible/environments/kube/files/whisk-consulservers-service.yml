@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: "whisk-consulservers-service"
+spec:
+  selector:
+    name: whisk
+    type: consulservers
+  ports:
+  - port: 8300
+    targetPort: 8300
+    name: consul-1
+  - port: 8301
+    targetPort: 8301
+    name: consul-2
+  - port: 8302
+    targetPort: 8302
+    name: consul-3
+  - port: 8400
+    targetPort: 8400
+    name: consul-4
+  - port: 8301
+    targetPort: 8301
+    protocol: UDP
+    name: consul-5
+  - port: 8301
+    targetPort: 8301
+    name: consul-6
+  - port: 8302
+    targetPort: 8302
+    protocol: UDP
+    name: consul-7
+  - port: 8600
+    targetPort: 8600
+    protocol: UDP
+    name: consul-8
+  - port: 8302
+    targetPort: 8302
+    name: consul-9
+  - port: 8500
+    targetPort: 8500
+    name: consul-10
+  - port: 8600
+    targetPort: 8600
+    name: consul-11
+  - port: 8600
+    targetPort: 8600
+    name: consul-12
